@@ -9,7 +9,7 @@ NUMCALL() {
   MPC=$($PSQL "select melting_point_celsius from properties where atomic_number = '$NUM'")
   BPC=$($PSQL "select boiling_point_celsius from properties where atomic_number = '$NUM'")
   TYP=$($PSQL "select type from types inner join properties using(type_id) where atomic_number='$NUM';")
-  echo "The element with atomic number $NUM is $NAM ($SYM). It's a nonmetal, with a mass of 1.008 amu. Hydrogen has a melting point of -259.1 celsius and a boiling point of -252.9 celsius."
+  echo "The element with atomic number $NUM is $NAM ($SYM). It's a $TYP, with a mass of $AMASS amu. $NAM has a melting point of $MPC celsius and a boiling point of $BPC celsius."
 }
 NAMCALL() {
   NAM=$1
@@ -19,8 +19,7 @@ NAMCALL() {
   MPC=$($PSQL "select melting_point_celsius from properties where atomic_number = '$NUM'")
   BPC=$($PSQL "select boiling_point_celsius from properties where atomic_number = '$NUM'")
   TYP=$($PSQL "select type from types inner join properties using(type_id) where atomic_number='$NUM';")
-  echo "The element with atomic number $NUM is $NAM ($SYM). It's a nonmetal, with a mass of 1.008 amu. Hydrogen has a melting point of -259.1 celsius and a boiling point of -252.9 celsius."
-
+  echo "The element with atomic number $NUM is $NAM ($SYM). It's a $TYP, with a mass of $AMASS amu. $NAM has a melting point of $MPC celsius and a boiling point of $BPC celsius."
 }
 SYMCALL() {
   SYM=$1
@@ -30,12 +29,39 @@ SYMCALL() {
   MPC=$($PSQL "select melting_point_celsius from properties where atomic_number = '$NUM'")
   BPC=$($PSQL "select boiling_point_celsius from properties where atomic_number = '$NUM'")
   TYP=$($PSQL "select type from types inner join properties using(type_id) where atomic_number='$NUM';")
-  echo "The element with atomic number $NUM is $NAM ($SYM). It's a nonmetal, with a mass of 1.008 amu. Hydrogen has a melting point of -259.1 celsius and a boiling point of -252.9 celsius."
+  echo "The element with atomic number $NUM is $NAM ($SYM). It's a $TYP, with a mass of $AMASS amu. $NAM has a melting point of $MPC celsius and a boiling point of $BPC celsius."
 }
 
 SPLIT() {
   #judgement
-  SYMCALL $1
+  INPUT=$1
+  
+  # Check if input is a number
+  if [[ $INPUT =~ ^[0-9]+$ ]]; then
+    NUMCALL $INPUT
+  # Check if input is a symbol (1-2 characters)
+  elif [[ $INPUT =~ ^[A-Za-z]{1,2}$ ]]; then
+    # Convert to proper case (first letter uppercase, second lowercase if exists)
+    PROPER_SYM=$(echo ${INPUT:0:1} | tr '[:lower:]' '[:upper:]')$(echo ${INPUT:1} | tr '[:upper:]' '[:lower:]')
+    
+    # Verify if it's a valid symbol in the database
+    if [[ $($PSQL "SELECT symbol FROM elements WHERE symbol='$PROPER_SYM'") ]]; then
+      SYMCALL $PROPER_SYM
+    else
+      echo "I could not find that element in the database."
+    fi
+  # Otherwise, assume it's a name
+  else
+    # Capitalize first letter, lowercase the rest
+    PROPER_NAME=$(echo ${INPUT:0:1} | tr '[:lower:]' '[:upper:]')$(echo ${INPUT:1} | tr '[:upper:]' '[:lower:]')
+    
+    # Verify if it's a valid name in the database
+    if [[ $($PSQL "SELECT name FROM elements WHERE name='$PROPER_NAME'") ]]; then
+      NAMCALL $PROPER_NAME
+    else
+      echo "I could not find that element in the database."
+    fi
+  fi
 }
 
 
